@@ -39,11 +39,15 @@ public class RtrProcessor {
         String reason = approved ? null : "LIMIT_EXCEEDED";
 
         Pacs002Response response = Pacs002Response.builder()
-                .originalMessageId(pacs008.getMessageId())
-                .status(status)
-                .reasonCode(reason)
-                .responseTime(Instant.now())
-                .build();
+        		  .originalPaymentId(pacs008.getMessageId())
+                  .transactionStatus(status)
+                  .reasonCode(reason)
+                  .fromAccount(pacs008.getDebtorAccount())
+                  .toAccount(pacs008.getCreditorAccount())
+                  .amount(pacs008.getAmount())
+                  .currency(pacs008.getCurrency())
+                  .settlementTimestamp(Instant.now())
+                  .build();
 
         log.info("Mock pacs.002 (Payments Canada): {}", response);
 
