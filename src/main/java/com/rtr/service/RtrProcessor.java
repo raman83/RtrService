@@ -2,8 +2,11 @@ package com.rtr.service;
 
 import com.rtr.dto.Pacs008Message;
 import com.common.iso.CanonicalPayment;
+import com.rtr.client.PaymentClient;
 import com.rtr.dto.Pacs002Response;
 import com.rtr.producer.Pacs002Producer;
+
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -18,10 +21,12 @@ import java.util.UUID;
 public class RtrProcessor {
 
     private final Pacs002Producer pacs002Producer;
+	  private final PaymentClient paymentClient;
+
 
     public void process(CanonicalPayment payment) {
         Pacs008Message pacs008 = Pacs008Message.builder()
-                .messageId(UUID.randomUUID().toString())
+                .messageId(payment.getPaymentId())
                 .endToEndId(payment.getPaymentId())
                 .debtorAccount(payment.getDebtorAccount())
                 .creditorAccount(payment.getCreditorAccount())
@@ -35,7 +40,7 @@ public class RtrProcessor {
         log.info("Simulated pacs.008: {}", pacs008);
 
         boolean approved = payment.getAmount().compareTo(BigDecimal.valueOf(500)) <= 0;
-        String status = approved ? "ACCEPTED" : "REJECTED";
+        String status = approved ? "PROCESSED" : "FAILED";
         String reason = approved ? null : "LIMIT_EXCEEDED";
 
         Pacs002Response response = Pacs002Response.builder()
@@ -50,7 +55,21 @@ public class RtrProcessor {
                   .build();
 
         log.info("Mock pacs.002 (Payments Canada): {}", response);
+       
+        
 
-        pacs002Producer.send(response);
+       pacs002Producer.send(response);
     }
+    
+    
+
+    private void updateCanonicalPayment(Pacs002Response response) {
+        paymentClient.updatePaymentStatus(
+        		UUID.fromString(response.getOriginalPaymentId()),
+        		response.getTransactionStatus(),
+        		response.getReasonCode()
+        );
+    }
+    
+    
 }
